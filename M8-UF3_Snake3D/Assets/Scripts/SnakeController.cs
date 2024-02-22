@@ -1,7 +1,4 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class SnakeController : MonoBehaviour
@@ -9,70 +6,90 @@ public class SnakeController : MonoBehaviour
     [SerializeField] private float moveSpeed;
     [SerializeField] private float bodySpeed;
     [SerializeField] private float steerSpeed;
-    [SerializeField] private GameObject  bodyPrefab;
+    [SerializeField] private GameObject bodyPrefab;
+    [SerializeField] private GameObject applePrefab;
+    [SerializeField] private Transform bodyPartsParent; // Referencia al objeto vacío "BodyParts"
 
-    private int gap = 10;
     private List<GameObject> bodyParts = new List<GameObject>();
     private List<Vector3> positionHistory = new List<Vector3>();
-    
+    private int applesEaten = 0;
+
     void Start()
     {
-        GrowSnake();
-        GrowSnake();
-        GrowSnake();
-        GrowSnake();
-        GrowSnake();
-        GrowSnake();
-        GrowSnake();
-        
-        //positionHistory.Insert(0, transform.position);
+        bodyParts.Add(gameObject);
         InvokeRepeating("UpdatePositionHistory", 0f, 0.01f);
-        
+        SpawnApple();
     }
-    
+
     void Update()
     {
-        //move forward
         transform.position += transform.forward * moveSpeed * Time.deltaTime;
-        
-        //steer
+
         float steerDirection = Input.GetAxis("Horizontal");
         transform.Rotate(Vector3.up * steerDirection * steerSpeed * Time.deltaTime);
-        
-        int index = 0;
-        foreach (GameObject body in bodyParts)
-        {
-            Vector3 point = positionHistory[Math.Min(index*10, positionHistory.Count-1)];
-            Vector3 moveDirection = point - body.transform.position;
-            body.transform.position += moveDirection * bodySpeed * Time.deltaTime;
 
-            body.transform.LookAt(point);
-            
-            index++;
-        }
+        MoveBody();
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
             GrowSnake();
         }
     }
-    
+
+    void MoveBody()
+    {
+        for (int i = 1; i < bodyParts.Count; i++)
+        {
+            Vector3 targetPosition = bodyParts[i - 1].transform.position;
+            Vector3 moveDirection = targetPosition - bodyParts[i].transform.position;
+            bodyParts[i].transform.position += moveDirection.normalized * bodySpeed * Time.deltaTime;
+            bodyParts[i].transform.LookAt(targetPosition);
+        }
+    }
+
     void UpdatePositionHistory()
     {
-        Debug.Log("UpdatePositionHistory");
-        // Añadir la posición actual al inicio de la lista
         positionHistory.Insert(0, transform.position);
 
-        // Si la lista excede el número máximo de posiciones, elimina la última
         if (positionHistory.Count > 500)
         {
             positionHistory.RemoveAt(positionHistory.Count - 1);
         }
     }
 
-    private void GrowSnake()
+    void GrowSnake()
     {
-        GameObject body = Instantiate(bodyPrefab);
-        bodyParts.Add(body);
+        Vector3 newPosition = bodyParts[bodyParts.Count - 1].transform.position - transform.forward * 1.0f;
+        GameObject newBodyPart = Instantiate(bodyPrefab, newPosition, Quaternion.identity);
+        newBodyPart.transform.parent = bodyPartsParent; // Establecer el padre como el objeto vacío "BodyParts"
+        bodyParts.Add(newBodyPart);
+    }
+
+    void SpawnApple()
+    {
+        if (GameObject.FindWithTag("Apple") == null) // Verificar si ya hay una manzana en el juego
+        {
+            Vector3 randomPos = new Vector3(Random.Range(-10f, 10f), 1f, Random.Range(-10f, 10f));
+            GameObject apple = Instantiate(applePrefab, randomPos, Quaternion.Euler(-90, 0, 0));
+            apple.transform.position = new Vector3(apple.transform.position.x, 1f, apple.transform.position.z);
+        }
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Apple"))
+        {
+            Destroy(other.gameObject);
+            GrowSnake();
+            SpawnApple();
+        }
+    }
+
+    public void AppleEaten()
+    {
+        applesEaten++;
+        Destroy(GameObject.FindGameObjectWithTag("Apple"));
+        GrowSnake();
+        SpawnApple();
     }
 }
