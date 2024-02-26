@@ -39,9 +39,4 @@ public class GameManager : MonoBehaviour
     {
         SceneManager.LoadScene("Snake3D");
     }
-
-    public void RestartGame()
-    {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    }
 }
