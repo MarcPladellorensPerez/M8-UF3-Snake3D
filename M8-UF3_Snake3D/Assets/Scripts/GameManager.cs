@@ -1,20 +1,47 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
-    public GameObject startCanvas;
-    public SnakeController snakeController;
+    private static GameManager instance;
 
-    void Start()
+    public static GameManager Instance
     {
-        Time.timeScale = 0; // Pausar el tiempo al iniciar el juego
-        startCanvas.SetActive(true); // Mostrar el Canvas de inicio
+        get
+        {
+            if (instance == null)
+            {
+                instance = FindObjectOfType<GameManager>();
+                if (instance == null)
+                {
+                    GameObject gameManagerObject = new GameObject("GameManager");
+                    instance = gameManagerObject.AddComponent<GameManager>();
+                }
+            }
+            return instance;
+        }
     }
 
-    public void StartGame()
+    private void Awake()
     {
-        Time.timeScale = 1; // Reanudar el tiempo al comenzar el juego
-        startCanvas.SetActive(false); // Ocultar el Canvas de inicio
-        snakeController.enabled = true; // Habilitar el control de la serpiente
+        if (instance != null && instance != this)
+        {
+            Destroy(gameObject);
+        }
+        else
+        {
+            instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+    }
+
+    public void LoadSnake3DScene()
+    {
+        SceneManager.LoadScene("Snake3D");
+    }
+
+    public void RestartGame()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 }

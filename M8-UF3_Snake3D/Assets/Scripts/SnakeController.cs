@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using TMPro;
 
 public class SnakeController : MonoBehaviour
 {
@@ -8,24 +10,30 @@ public class SnakeController : MonoBehaviour
     [SerializeField] private float steerSpeed;
     [SerializeField] private GameObject bodyPrefab;
     [SerializeField] private GameObject applePrefab;
-    [SerializeField] private Transform bodyPartsParent; // Referencia al objeto vacío "BodyParts"
+    [SerializeField] private StickController stickController;
+
+    public TextMeshProUGUI scoreText; // Referencia al objeto TextMeshPro que muestra la puntuación
 
     private List<GameObject> bodyParts = new List<GameObject>();
     private List<Vector3> positionHistory = new List<Vector3>();
     private int applesEaten = 0;
+
+    private Vector2 moveDirection = Vector2.zero;
 
     void Start()
     {
         bodyParts.Add(gameObject);
         InvokeRepeating("UpdatePositionHistory", 0f, 0.01f);
         SpawnApple();
+
+        // Suscribirse al evento StickChanged del StickController
+        stickController.StickChanged += OnStickChanged;
     }
 
     void Update()
     {
-        transform.position += transform.forward * moveSpeed * Time.deltaTime;
-
-        float steerDirection = Input.GetAxis("Horizontal");
+        // Utilizar el movimiento del joystick para girar la serpiente
+        float steerDirection = moveDirection.x;
         transform.Rotate(Vector3.up * steerDirection * steerSpeed * Time.deltaTime);
 
         MoveBody();
@@ -36,8 +44,16 @@ public class SnakeController : MonoBehaviour
         }
     }
 
+    void OnStickChanged(object sender, StickEventArgs e)
+    {
+        // Actualizar la dirección de movimiento según el joystick
+        moveDirection = e.Position;
+    }
+
     void MoveBody()
     {
+        transform.position += transform.forward * moveSpeed * Time.deltaTime;
+
         for (int i = 1; i < bodyParts.Count; i++)
         {
             Vector3 targetPosition = bodyParts[i - 1].transform.position;
@@ -61,18 +77,14 @@ public class SnakeController : MonoBehaviour
     {
         Vector3 newPosition = bodyParts[bodyParts.Count - 1].transform.position - transform.forward * 1.0f;
         GameObject newBodyPart = Instantiate(bodyPrefab, newPosition, Quaternion.identity);
-        newBodyPart.transform.parent = bodyPartsParent; // Establecer el padre como el objeto vacío "BodyParts"
         bodyParts.Add(newBodyPart);
     }
 
     void SpawnApple()
     {
-        if (GameObject.FindWithTag("Apple") == null) // Verificar si ya hay una manzana en el juego
-        {
-            Vector3 randomPos = new Vector3(Random.Range(-10f, 10f), 1f, Random.Range(-10f, 10f));
-            GameObject apple = Instantiate(applePrefab, randomPos, Quaternion.Euler(-90, 0, 0));
-            apple.transform.position = new Vector3(apple.transform.position.x, 1f, apple.transform.position.z);
-        }
+        Vector3 randomPos = new Vector3(Random.Range(-10f, 10f), 1f, Random.Range(-10f, 10f));
+        GameObject apple = Instantiate(applePrefab, randomPos, Quaternion.Euler(-90, 0, 0));
+        apple.transform.position = new Vector3(apple.transform.position.x, 1f, apple.transform.position.z);
     }
 
     void OnTriggerEnter(Collider other)
@@ -82,14 +94,20 @@ public class SnakeController : MonoBehaviour
             Destroy(other.gameObject);
             GrowSnake();
             SpawnApple();
+            UpdateScore(); // Actualizar el contador de puntuación
+        }
+        else if (other.CompareTag("Die"))
+        {
+            SceneManager.LoadScene("Menu"); // Cambiar a la escena del menú
         }
     }
 
-    public void AppleEaten()
+    public void UpdateScore()
     {
         applesEaten++;
-        Destroy(GameObject.FindGameObjectWithTag("Apple"));
-        GrowSnake();
-        SpawnApple();
+        if (scoreText != null)
+        {
+            scoreText.text = "Score: " + applesEaten.ToString();
+        }
     }
 }
