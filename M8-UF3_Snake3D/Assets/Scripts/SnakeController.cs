@@ -13,6 +13,7 @@ public class SnakeController : MonoBehaviour
     [SerializeField] private StickController stickController;
 
     public TextMeshProUGUI scoreText; // Referencia al objeto TextMeshPro que muestra la puntuación
+    public TextMeshProUGUI bestScoreText; // Referencia al objeto TextMeshPro que muestra el Best Score
 
     private List<GameObject> bodyParts = new List<GameObject>();
     private List<Vector3> positionHistory = new List<Vector3>();
@@ -28,6 +29,10 @@ public class SnakeController : MonoBehaviour
 
         // Suscribirse al evento StickChanged del StickController
         stickController.StickChanged += OnStickChanged;
+
+        // Recuperar el Best Score guardado
+        int bestScore = PlayerPrefs.GetInt("BestScore", 0);
+        bestScoreText.text = "Best Score: " + bestScore.ToString();
     }
 
     void Update()
@@ -98,6 +103,7 @@ public class SnakeController : MonoBehaviour
         }
         else if (other.CompareTag("Die"))
         {
+            UpdateBestScore(); // Actualizar el Best Score
             SceneManager.LoadScene("Menu"); // Cambiar a la escena del menú
         }
     }
@@ -108,6 +114,20 @@ public class SnakeController : MonoBehaviour
         if (scoreText != null)
         {
             scoreText.text = "Score: " + applesEaten.ToString();
+        }
+    }
+
+    void UpdateBestScore()
+    {
+        // Obtener el Best Score actual
+        int bestScore = PlayerPrefs.GetInt("BestScore", 0);
+
+        // Actualizar el Best Score si es necesario
+        if (applesEaten > bestScore)
+        {
+            bestScore = applesEaten;
+            PlayerPrefs.SetInt("BestScore", bestScore);
+            bestScoreText.text = "Best Score: " + bestScore.ToString();
         }
     }
 }
